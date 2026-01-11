@@ -7,7 +7,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/99designs/keyring"
@@ -176,7 +175,7 @@ func fileKeyringPasswordFuncFrom(password string, isTTY bool) keyring.PromptFunc
 
 // fileKeyringPasswordFunc returns the password prompt function for file-based keyring
 func fileKeyringPasswordFunc() keyring.PromptFunc {
-	return fileKeyringPasswordFuncFrom(os.Getenv(keyringPasswordEnv), term.IsTerminal(syscall.Stdin))
+	return fileKeyringPasswordFuncFrom(os.Getenv(keyringPasswordEnv), term.IsTerminal(int(os.Stdin.Fd())))
 }
 
 // OpenDefault opens the default credential store
