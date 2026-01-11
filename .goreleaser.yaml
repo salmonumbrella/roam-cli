@@ -50,6 +50,7 @@ changelog:
 
 brews:
   - name: roam-cli
+    directory: Formula
     repository:
       owner: salmonumbrella
       name: homebrew-tap
