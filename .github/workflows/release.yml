@@ -28,4 +28,16 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Update Homebrew formula
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          gh workflow run generate-formula.yml \
+            --repo salmonumbrella/homebrew-tap \
+            --field repo=salmonumbrella/roam-cli \
+            --field version=${{ github.ref_name }} \
+            --field binary_name=roam \
+            --field formula_name=roam-cli \
+            --field description="CLI for Roam Research to manage pages, blocks, and daily notes" \
+            --field archive_prefix=roam-cli
