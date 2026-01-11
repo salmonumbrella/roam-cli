@@ -147,6 +147,12 @@ func runLogin(cmd *cobra.Command, args []string) error {
 
 // runBrowserLogin performs browser-based authentication
 func runBrowserLogin(ctx context.Context, store secrets.Store) error {
+	// Warm up the keyring by triggering any passphrase prompts BEFORE opening the browser.
+	// This prevents the user from being stuck in the browser while the terminal waits for input.
+	if _, err := store.Keys(); err != nil {
+		return fmt.Errorf("failed to access credential store: %w", err)
+	}
+
 	// Create save function that stores credentials
 	saveFunc := func(profile string, graphName string, tok secrets.Token) error {
 		// Store the token
