@@ -3,30 +3,13 @@ version: 2
 project_name: roam-cli
 
 builds:
-  # macOS builds - require CGO for keychain access
-  - id: roam-darwin
-    main: ./cmd/roam
-    binary: roam
-    env:
-      - CGO_ENABLED=1
-    goos:
-      - darwin
-    goarch:
-      - amd64
-      - arm64
-    ldflags:
-      - -s -w
-      - -X github.com/salmonumbrella/roam-cli/internal/cmd.version={{.Version}}
-      - -X github.com/salmonumbrella/roam-cli/internal/cmd.commit={{.ShortCommit}}
-      - -X github.com/salmonumbrella/roam-cli/internal/cmd.date={{.Date}}
-
-  # Linux and Windows builds - no CGO needed
-  - id: roam-other
+  - id: roam
     main: ./cmd/roam
     binary: roam
     env:
       - CGO_ENABLED=0
     goos:
+      - darwin
       - linux
       - windows
     goarch:
