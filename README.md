@@ -20,7 +20,7 @@ Roam Research in your terminal. Query, create, update, and automate pages, block
 ### Homebrew
 
 ```bash
-brew install salmonumbrella/tap/roam
+brew install salmonumbrella/tap/roam-cli
 ```
 
 ## Quick Start
@@ -321,17 +321,6 @@ make test
 make lint
 ```
 
-### Future Infrastructure
-
-- Local API auto-resolution for page-title/daily-note on writes
-- Higher-level graph automation helpers
-- Richer formatting options for structured outputs
-
 ## License
 
 MIT
-
-## Links
-
-- https://github.com/salmonumbrella/roam-cli
-- https://roamresearch.com/#/app/developer-documentation

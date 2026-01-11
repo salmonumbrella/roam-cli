@@ -64,3 +64,17 @@ changelog:
       - "^ci:"
       - Merge pull request
       - Merge branch
+
+brews:
+  - name: roam-cli
+    repository:
+      owner: salmonumbrella
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: https://github.com/salmonumbrella/roam-cli
+    description: "Command-line interface for Roam Research"
+    license: MIT
+    install: |
+      bin.install "roam"
+    test: |
+      system "#{bin}/roam", "--version"
