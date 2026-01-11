@@ -1,9 +1,11 @@
+version: "2"
+
 run:
   timeout: 5m
 
 linters:
+  default: none
   enable:
-    - errcheck
     - govet
     - ineffassign
     - staticcheck
@@ -12,20 +14,31 @@ linters:
     - unconvert
     - unparam
     - prealloc
+  settings:
+    misspell:
+      locale: US
+    staticcheck:
+      checks:
+        - all
+        - '-ST1000'
+        - '-ST1005'
+        - '-QF1003'
+
+formatters:
+  enable:
     - gofumpt
     - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/salmonumbrella/roam-cli
 
-linters-settings:
-  goimports:
-    local-prefixes: github.com/salmonumbrella/roam-cli
-  misspell:
-    locale: US
+output:
+  formats:
+    text:
+      print-linter-name: true
+      print-issued-lines: true
 
 issues:
-  exclude-use-default: true
   max-issues-per-linter: 50
   max-same-issues: 10
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
