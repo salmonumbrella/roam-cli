@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authorization Failed - roam</title>
+    <style>
+        :root {
+            /* Brand colors - customize these for your service */
+            --brand-primary: #4285F4;
+            --brand-secondary: #34A853;
+
+            /* Status colors */
+            --error: #EA4335;
+            --error-dim: rgba(234, 67, 53, 0.12);
+            --error-glow: rgba(234, 67, 53, 0.15);
+
+            /* Dark theme */
+            --bg-void: #0a0a0f;
+            --bg-surface: #111118;
+            --bg-elevated: #18181f;
+            --border: #1f1f2e;
+            --text: #e8e8ed;
+            --text-secondary: #a1a1aa;
+            --text-muted: #8888a0;
+            --text-dim: #4a4a5a;
+
+            --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-void);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image:
+                linear-gradient(rgba(234, 67, 53, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(234, 67, 53, 0.02) 1px, transparent 1px);
+            background-size: 80px 80px;
+            pointer-events: none;
+        }
+
+        .orb {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.35;
+            pointer-events: none;
+            background: var(--error);
+            top: -20%;
+            right: -10%;
+            animation: orbPulse 4s ease-in-out infinite;
+        }
+
+        @keyframes orbPulse {
+            0%, 100% { opacity: 0.35; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        .error-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+            background: var(--error-glow);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: iconShake 0.5s ease 0.2s both;
+            box-shadow: 0 8px 32px rgba(234, 67, 53, 0.2);
+        }
+
+        .error-icon svg {
+            width: 40px;
+            height: 40px;
+            stroke: var(--error);
+            stroke-width: 2;
+        }
+
+        @keyframes iconShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.625rem;
+            color: var(--text);
+            animation: fadeIn 0.5s ease 0.3s both;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin-bottom: 2rem;
+            animation: fadeIn 0.5s ease 0.4s both;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .error-card {
+            background: var(--bg-surface);
+            border: 1px solid rgba(234, 67, 53, 0.2);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            text-align: left;
+            animation: fadeIn 0.5s ease 0.5s both;
+        }
+
+        .error-label {
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--error);
+            margin-bottom: 0.5rem;
+        }
+
+        .error-message {
+            font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+            font-size: 0.875rem;
+            color: var(--text);
+            word-break: break-word;
+            line-height: 1.6;
+        }
+
+        .help-section {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            text-align: left;
+            animation: fadeIn 0.5s ease 0.6s both;
+        }
+
+        .help-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-dim);
+            margin-bottom: 1rem;
+        }
+
+        .help-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .help-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .help-num {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            background: var(--bg-elevated);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+            font-size: 0.6875rem;
+            color: var(--text-dim);
+        }
+
+        .help-item code {
+            font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+            background: var(--bg-elevated);
+            padding: 0.125rem 0.375rem;
+            border-radius: 4px;
+            font-size: 0.8125rem;
+            color: var(--brand-primary);
+        }
+
+        .retry-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 1.5rem;
+            padding: 12px 24px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            animation: fadeIn 0.5s ease 0.7s both;
+        }
+
+        .retry-btn:hover {
+            background: var(--bg-elevated);
+            border-color: var(--brand-primary);
+            color: var(--brand-primary);
+        }
+
+        .retry-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .footer {
+            margin-top: 2rem;
+            font-size: 0.8125rem;
+            color: var(--text-dim);
+            animation: fadeIn 0.5s ease 0.8s both;
+        }
+    </style>
+</head>
+<body>
+    <div class="orb"></div>
+
+    <div class="container">
+        <div class="error-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+        </div>
+
+        <h1>Authorization failed</h1>
+        <p class="subtitle">Unable to authenticate with roam</p>
+
+        <div class="error-card">
+            <div class="error-label">Error</div>
+            <div class="error-message">{{.Error}}</div>
+        </div>
+
+        <div class="help-section">
+            <div class="help-title">Try again</div>
+            <div class="help-item">
+                <span class="help-num">1</span>
+                <span>Close this window and return to your terminal</span>
+            </div>
+            <div class="help-item">
+                <span class="help-num">2</span>
+                <span>Run <code>roam auth login</code> to restart</span>
+            </div>
+            <div class="help-item">
+                <span class="help-num">3</span>
+                <span>If the issue persists, try <code>roam auth login --force</code></span>
+            </div>
+        </div>
+
+        <a href="/" class="retry-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 2v6h-6"></path>
+                <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+                <path d="M3 22v-6h6"></path>
+                <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+            </svg>
+            Try Again
+        </a>
+
+        <p class="footer">You can close this window.</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# Build artifacts
+/build/
+
+# Compiled binary
+/roam
+
+# OS files
+.DS_Store
+
+# Local-only
+.private-journal/
+internal/roamdb/types_edge_test.go
+
+# IDE
+.cursor/
+.specstory/
+
+# Documentation (internal)
+docs/

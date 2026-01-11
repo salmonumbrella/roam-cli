@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Complete - Roam CLI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Dark theme background */
+            --bg-deep: #1c2127;
+            --bg-card: #252a31;
+            --bg-input: #2f343c;
+            --border: #404854;
+
+            /* Text colors */
+            --text: #f6f7f9;
+            --text-muted: #abb3bf;
+            --text-dim: #5f6b7c;
+
+            /* Roam-specific */
+            --roam-blue: #137CBD;
+            --green-4: #32A467;
+            --green-5: #72CA9B;
+            --success: #238551;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Space Grotesk', -apple-system, sans-serif;
+            background: var(--bg-deep);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+        }
+
+        /* Subtle white grid */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+        }
+
+        /* White glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 560px;
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+            display: block;
+            animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 20px rgba(255, 255, 255, 0.25));
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+            animation: fadeUp 0.5s ease 0.2s both;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin-bottom: 2.5rem;
+            animation: fadeUp 0.5s ease 0.3s both;
+        }
+
+        .graph-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 8px 14px;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            animation: fadeUp 0.5s ease 0.35s both;
+        }
+
+        .graph-badge .dot {
+            width: 8px;
+            height: 8px;
+            background: var(--green-4);
+            border-radius: 50%;
+            animation: dotPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes dotPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Terminal card */
+        .terminal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            text-align: left;
+            animation: fadeUp 0.5s ease 0.4s both;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .terminal-bar {
+            background: var(--bg-input);
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.red { background: #ff5f57; }
+        .terminal-dot.yellow { background: #febc2e; }
+        .terminal-dot.green { background: #28c840; }
+
+        .terminal-title {
+            flex: 1;
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        .terminal-body {
+            padding: 1.5rem;
+        }
+
+        .terminal-line {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            margin-bottom: 1rem;
+        }
+
+        .terminal-line:last-child {
+            margin-bottom: 0;
+        }
+
+        .terminal-prompt {
+            color: var(--text-muted);
+            user-select: none;
+        }
+
+        .terminal-text {
+            color: var(--text);
+        }
+
+        .terminal-cursor {
+            display: inline-block;
+            width: 10px;
+            height: 18px;
+            background: var(--text-muted);
+            animation: cursorBlink 1.2s step-end infinite;
+            margin-left: 2px;
+            vertical-align: middle;
+        }
+
+        @keyframes cursorBlink {
+            0%, 50% { opacity: 1; }
+            50.01%, 100% { opacity: 0; }
+        }
+
+        .terminal-output {
+            color: var(--green-5);
+            padding-left: 1.25rem;
+            margin-top: -0.5rem;
+            margin-bottom: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+
+        /* Message */
+        .message {
+            margin-top: 2rem;
+            padding: 16px 20px;
+            background: rgba(50, 164, 103, 0.1);
+            border: 1px solid rgba(50, 164, 103, 0.2);
+            border-radius: 3px;
+            animation: fadeUp 0.5s ease 0.5s both;
+        }
+
+        .message-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .message-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--text);
+        }
+
+        .message-text {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .message-text code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-input);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            color: var(--green-5);
+            border: 1px solid var(--border);
+        }
+
+        /* Countdown timer */
+        .countdown {
+            margin-top: 1.5rem;
+            animation: fadeUp 0.5s ease 0.55s both;
+        }
+
+        .countdown-text {
+            font-size: 13px;
+            color: var(--text-dim);
+            margin-bottom: 0.5rem;
+        }
+
+        .countdown-bar {
+            height: 4px;
+            background: var(--bg-input);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .countdown-progress {
+            height: 100%;
+            background: var(--green-4);
+            border-radius: 2px;
+            transition: width 1s linear;
+            width: 100%;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 13px;
+            color: var(--text-dim);
+            animation: fadeUp 0.5s ease 0.6s both;
+        }
+
+        .footer a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer a:hover {
+            color: var(--text);
+        }
+
+        .github-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .github-link svg {
+            opacity: 0.7;
+            transition: opacity 0.1s;
+        }
+
+        .github-link:hover svg {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <img src="https://roamresearch.com/assets/astro.png" alt="Roam Research" />
+        </div>
+
+        <h1>You're all set!</h1>
+        <p class="subtitle">Roam CLI is now connected and ready to use</p>
+
+        {{if .GraphName}}
+        <div class="graph-badge">
+            <span class="dot"></span>
+            <span>{{.GraphName}}{{if eq .Mode "encrypted"}} (encrypted){{end}}</span>
+        </div>
+        {{end}}
+
+        <div class="terminal">
+            <div class="terminal-bar">
+                <span class="terminal-dot red"></span>
+                <span class="terminal-dot yellow"></span>
+                <span class="terminal-dot green"></span>
+                <span class="terminal-title"></span>
+            </div>
+            <div class="terminal-body">
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span>
+                    <span class="terminal-text">roam page list --limit 5</span>
+                </div>
+                <div class="terminal-output">Fetching pages...</div>
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span>
+                    <span class="terminal-text">roam search "meeting notes"</span>
+                </div>
+                <div class="terminal-output">Found 12 blocks</div>
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span>
+                    <span class="terminal-cursor"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="message">
+            <div class="message-icon">&#8592;</div>
+            <div class="message-title">Return to your terminal</div>
+            <div class="message-text">You can close this window and start using the CLI. Try running <code>roam --help</code> to see all available commands.</div>
+        </div>
+
+        <div class="countdown">
+            <div class="countdown-text">This page will close in <span id="countdown-seconds">30</span> seconds</div>
+            <div class="countdown-bar">
+                <div id="countdown-progress" class="countdown-progress"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="https://github.com/salmonumbrella/roam-cli" target="_blank" class="github-link">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+                View on GitHub
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Signal completion to server
+        fetch('/complete', { method: 'POST', headers: { 'X-CSRF-Token': '{{.CSRFToken}}' } }).catch(() => {});
+
+        // Countdown timer
+        let seconds = 30;
+        const countdownText = document.getElementById('countdown-seconds');
+        const progressBar = document.getElementById('countdown-progress');
+
+        const interval = setInterval(() => {
+            seconds--;
+            countdownText.textContent = seconds;
+            progressBar.style.width = ((seconds / 30) * 100) + '%';
+
+            if (seconds <= 0) {
+                clearInterval(interval);
+                window.close();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
