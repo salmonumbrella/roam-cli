@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roam CLI Setup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Dark theme background */
+            --bg-deep: #1c2127;
+            --bg-card: #252a31;
+            --bg-input: #2f343c;
+            --border: #404854;
+            --border-hover: #5f6b7c;
+
+            /* Text colors */
+            --text: #f6f7f9;
+            --text-muted: #abb3bf;
+            --text-dim: #5f6b7c;
+
+            /* Blueprint.js Blue (Primary Intent) */
+            --blue-1: #184A90;
+            --blue-2: #215DB0;
+            --blue-3: #2D72D2;
+            --blue-4: #4C90F0;
+            --blue-5: #8ABBFF;
+
+            /* Blueprint.js Green (Success Intent) */
+            --green-1: #165A36;
+            --green-2: #1C6E42;
+            --green-3: #238551;
+            --green-4: #32A467;
+            --green-5: #72CA9B;
+
+            /* Blueprint.js Red (Danger Intent) */
+            --red-1: #8E292C;
+            --red-2: #AC2F33;
+            --red-3: #CD4246;
+            --red-4: #E76A6E;
+            --red-5: #FA999C;
+
+            /* Roam-specific colors */
+            --roam-blue: #137CBD;
+            --roam-blue-light: #1a8fd4;
+            --roam-blue-dark: #0f6aa8;
+            --roam-blue-glow: rgba(19, 124, 189, 0.3);
+            --roam-header: #343A40;
+            --success: #238551;
+            --success-glow: rgba(35, 133, 81, 0.2);
+            --accent: #137CBD;
+            --accent-glow: rgba(19, 124, 189, 0.2);
+            --accent-hover: #1a8fd4;
+            --error: #CD4246;
+            --error-glow: rgba(205, 66, 70, 0.2);
+            --warning: #C87619;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', -apple-system, sans-serif;
+            background: var(--bg-deep);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background grid - subtle white lines */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Gradient orbs - white glow like behind Roam logo */
+        body::after {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background:
+                radial-gradient(ellipse at 20% 30%, rgba(255, 255, 255, 0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+            animation: orbFloat 20s ease-in-out infinite;
+        }
+
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-5%, 5%); }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 520px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Terminal header */
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .terminal-prompt {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .terminal-prompt::before {
+            content: '$';
+            color: var(--text-muted);
+        }
+
+        /* Logo */
+        .logo-section {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .logo {
+            width: 72px;
+            height: 72px;
+            margin-bottom: 1.25rem;
+            display: inline-block;
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 20px rgba(255, 255, 255, 0.25));
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9375rem;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0,0,0,0.1);
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            color: var(--text);
+            transition: all 0.1s ease;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        input::placeholder {
+            color: var(--text-dim);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--roam-blue);
+            box-shadow: 0 0 0 1px var(--roam-blue), 0 0 0 3px var(--accent-glow);
+        }
+
+        input:hover:not(:focus) {
+            border-color: var(--border-hover);
+        }
+
+        input.error {
+            border-color: var(--error);
+            box-shadow: 0 0 0 3px var(--error-glow);
+        }
+
+        input.error:focus {
+            border-color: var(--error);
+            box-shadow: 0 0 0 3px var(--error-glow);
+        }
+
+        .input-hint {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-top: 0.375rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Checkbox for encrypted graph */
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .checkbox-group:hover {
+            border-color: var(--roam-blue);
+            box-shadow: 0 0 0 1px var(--roam-blue), 0 0 0 3px var(--accent-glow);
+        }
+
+        .checkbox-group:has(input:checked) {
+            border-color: var(--roam-blue);
+            box-shadow: 0 0 0 1px var(--roam-blue), 0 0 0 3px var(--accent-glow);
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            accent-color: var(--roam-blue);
+            cursor: pointer;
+        }
+
+        .checkbox-label {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .checkbox-label .label-text {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 0.25rem;
+        }
+
+        .checkbox-label .label-hint {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        /* Buttons - Blueprint.js style */
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 2rem;
+        }
+
+        button {
+            flex: 1;
+            padding: 10px 16px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            border: none;
+            min-height: 40px;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%), var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%), var(--bg-input);
+            border-color: var(--border-hover);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 2px 4px rgba(0,0,0,0.25);
+        }
+
+        .btn-secondary:active {
+            background: var(--bg-card);
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(180deg, var(--roam-blue-light) 0%, var(--roam-blue) 100%);
+            color: white;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1), 0 1px 2px rgba(0,0,0,0.2), 0 2px 6px var(--roam-blue-glow);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(180deg, #2a9de0 0%, var(--roam-blue-light) 100%);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15), 0 2px 4px rgba(0,0,0,0.25), 0 4px 12px var(--roam-blue-glow);
+        }
+
+        .btn-primary:active {
+            background: linear-gradient(180deg, var(--roam-blue) 0%, var(--roam-blue-dark) 100%);
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        /* Status messages */
+        .status {
+            margin-top: 1.5rem;
+            padding: 12px 14px;
+            border-radius: 3px;
+            font-size: 13px;
+            display: none;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .status.show {
+            display: flex;
+        }
+
+        .status.loading {
+            background: rgba(45, 114, 210, 0.15);
+            border: 1px solid rgba(45, 114, 210, 0.3);
+            color: var(--blue-5);
+        }
+
+        .status.success {
+            background: rgba(35, 133, 81, 0.15);
+            border: 1px solid rgba(35, 133, 81, 0.3);
+            color: var(--green-5);
+        }
+
+        .status.error {
+            background: rgba(205, 66, 70, 0.15);
+            border: 1px solid rgba(205, 66, 70, 0.3);
+            color: var(--red-5);
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Help section */
+        .help-section {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .help-title {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 1rem;
+        }
+
+        .help-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.875rem;
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        .help-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .help-icon {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            background: var(--bg-input);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.625rem;
+            color: var(--text-dim);
+        }
+
+        .help-item code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-input);
+            padding: 0.125rem 0.375rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: var(--roam-blue);
+        }
+
+        /* Dynamic links */
+        .hint-link, .help-link {
+            color: var(--roam-blue);
+            text-decoration: none;
+            border-bottom: 1px dashed rgba(19, 124, 189, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .hint-link:hover, .help-link:hover {
+            color: var(--accent-hover);
+            border-bottom-color: var(--accent-hover);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.8125rem;
+            color: var(--text-dim);
+        }
+
+        .footer a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer a:hover {
+            color: var(--text);
+        }
+
+        .github-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .github-link svg {
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .github-link:hover svg {
+            opacity: 1;
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card { animation-delay: 0.1s; opacity: 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="terminal-header">
+            <div class="terminal-prompt">
+                roam auth login
+            </div>
+        </div>
+
+        <div class="logo-section fade-in">
+            <div class="logo">
+                <img src="https://roamresearch.com/assets/astro.png" alt="Roam Research" />
+            </div>
+            <h1>Connect to Roam Research</h1>
+            <p class="subtitle">Configure your CLI to interact with your graph</p>
+        </div>
+
+        <div class="card fade-in">
+            <form id="setupForm" autocomplete="off">
+                <div class="form-group">
+                    <label for="graphName">Graph Name</label>
+                    <input
+                        type="text"
+                        id="graphName"
+                        name="graphName"
+                        placeholder="my-graph"
+                        required
+                    >
+                    <div class="input-hint">The name of your Roam graph (from the URL)</div>
+                </div>
+
+                <div id="apiTokenGroup" class="form-group">
+                    <label for="apiToken">API Token</label>
+                    <input
+                        type="password"
+                        id="apiToken"
+                        name="apiToken"
+                        placeholder="Enter your API token"
+                    >
+                    <div class="input-hint">
+                        <a href="https://roamresearch.com/#/app" target="_blank" class="hint-link">Graph Settings</a> &rarr; API Tokens
+                    </div>
+                </div>
+
+                <label class="checkbox-group">
+                    <input type="checkbox" id="encryptedGraph" name="encryptedGraph">
+                    <div class="checkbox-label">
+                        <div class="label-text">Encrypted Graph (Local API)</div>
+                        <div class="label-hint">For graphs that store data only on your device. Requires Roam desktop app to be running.</div>
+                    </div>
+                </label>
+
+                <div class="btn-group">
+                    <button type="button" id="testBtn" class="btn-secondary">Test Connection</button>
+                    <button type="submit" id="submitBtn" class="btn-primary">Save & Connect</button>
+                </div>
+
+                <div id="status" class="status"></div>
+            </form>
+
+            <div class="help-section">
+                <div class="help-title">Where to find your credentials</div>
+                <div class="help-item">
+                    <span class="help-icon">1</span>
+                    <span>Open your Roam graph in the browser</span>
+                </div>
+                <div class="help-item">
+                    <span class="help-icon">2</span>
+                    <span>Click the <code>...</code> menu &rarr; Settings</span>
+                </div>
+                <div class="help-item">
+                    <span class="help-icon">3</span>
+                    <span>Navigate to <strong>Graph</strong> &rarr; <strong>API tokens</strong></span>
+                </div>
+                <div class="help-item">
+                    <span class="help-icon">4</span>
+                    <span>Generate a new token and copy it here</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer fade-in" style="animation-delay: 0.2s; opacity: 0;">
+            <a href="https://github.com/salmonumbrella/roam-cli" target="_blank" class="github-link">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+                View on GitHub
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('setupForm');
+        const testBtn = document.getElementById('testBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const status = document.getElementById('status');
+        const csrfToken = '{{.CSRFToken}}';
+        const encryptedCheckbox = document.getElementById('encryptedGraph');
+        const apiTokenGroup = document.getElementById('apiTokenGroup');
+        const apiTokenInput = document.getElementById('apiToken');
+
+        // Toggle API token field based on encrypted graph checkbox
+        function updateApiTokenVisibility() {
+            if (encryptedCheckbox.checked) {
+                apiTokenInput.disabled = true;
+                apiTokenInput.value = '';
+                apiTokenInput.placeholder = 'Not needed for local API';
+                apiTokenInput.classList.remove('error');
+                apiTokenGroup.style.opacity = '0.5';
+            } else {
+                apiTokenInput.disabled = false;
+                apiTokenInput.placeholder = 'Enter your API token';
+                apiTokenGroup.style.opacity = '1';
+            }
+        }
+
+        encryptedCheckbox.addEventListener('change', updateApiTokenVisibility);
+        updateApiTokenVisibility(); // Initialize on page load
+
+        function showStatus(type, message) {
+            status.className = 'status show ' + type;
+            if (type === 'loading') {
+                status.innerHTML = '<div class="spinner"></div><span>' + message + '</span>';
+            } else {
+                const icon = type === 'success' ? '&#10003;' : '&#10007;';
+                status.innerHTML = '<span>' + icon + '</span><span>' + message + '</span>';
+            }
+        }
+
+        function hideStatus() {
+            status.className = 'status';
+        }
+
+        function getFormData() {
+            return {
+                graph_name: document.getElementById('graphName').value.trim(),
+                api_token: document.getElementById('apiToken').value.trim(),
+                encrypted_graph: document.getElementById('encryptedGraph').checked
+            };
+        }
+
+        function validateFields() {
+            const isEncrypted = encryptedCheckbox.checked;
+            const fields = [
+                { el: document.getElementById('graphName'), value: document.getElementById('graphName').value.trim(), required: true }
+            ];
+
+            // Only require API token for cloud graphs
+            if (!isEncrypted) {
+                fields.push({ el: apiTokenInput, value: apiTokenInput.value.trim(), required: true });
+            }
+
+            let valid = true;
+            fields.forEach(f => {
+                if (f.required && !f.value) {
+                    f.el.classList.add('error');
+                    valid = false;
+                } else {
+                    f.el.classList.remove('error');
+                }
+            });
+            return valid;
+        }
+
+        // Clear error state on input
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', () => input.classList.remove('error'));
+        });
+
+        testBtn.addEventListener('click', async () => {
+            hideStatus();
+            if (!validateFields()) return;
+
+            const data = getFormData();
+            testBtn.disabled = true;
+            submitBtn.disabled = true;
+            showStatus('loading', 'Testing connection...');
+
+            try {
+                const response = await fetch('/validate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus('success', 'Connected to graph: ' + result.graph_name);
+                } else {
+                    showStatus('error', result.error);
+                }
+            } catch (err) {
+                showStatus('error', 'Request failed: ' + err.message);
+            } finally {
+                testBtn.disabled = false;
+                submitBtn.disabled = false;
+            }
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideStatus();
+            if (!validateFields()) return;
+
+            const data = getFormData();
+            testBtn.disabled = true;
+            submitBtn.disabled = true;
+            showStatus('loading', 'Saving credentials...');
+
+            try {
+                const response = await fetch('/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus('success', 'Credentials saved! Redirecting...');
+                    setTimeout(() => {
+                        window.location.href = '/success?graph=' + encodeURIComponent(result.graph_name) + '&mode=' + encodeURIComponent(result.mode);
+                    }, 1000);
+                } else {
+                    showStatus('error', result.error);
+                    testBtn.disabled = false;
+                    submitBtn.disabled = false;
+                }
+            } catch (err) {
+                showStatus('error', 'Request failed: ' + err.message);
+                testBtn.disabled = false;
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

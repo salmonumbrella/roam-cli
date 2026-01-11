@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connected - roam</title>
+    <style>
+        :root {
+            /* Brand colors - customize these for your service */
+            --brand-primary: #4285F4;
+            --brand-secondary: #34A853;
+            --brand-primary-dim: #4285F420;
+
+            /* Status colors */
+            --success: #34A853;
+            --success-dim: rgba(52, 168, 83, 0.12);
+
+            /* Dark theme */
+            --bg-void: #050508;
+            --bg-base: #0a0a0f;
+            --bg-surface: #111116;
+            --bg-elevated: #18181d;
+            --bg-hover: #1f1f26;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-subtle: rgba(255, 255, 255, 0.04);
+            --text: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --text-dim: #52525b;
+
+            --radius-sm: 8px;
+            --radius: 12px;
+            --radius-lg: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-void);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Subtle grid pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 64px 64px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Animated gradient orb */
+        .orb {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.4;
+            pointer-events: none;
+            animation: orbDrift 25s ease-in-out infinite;
+        }
+
+        .orb-primary {
+            background: var(--brand-primary);
+            top: -20%;
+            left: -10%;
+        }
+
+        .orb-success {
+            background: var(--success);
+            width: 400px;
+            height: 400px;
+            top: 60%;
+            right: -10%;
+            animation-delay: -10s;
+        }
+
+        @keyframes orbDrift {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -20px) scale(1.05); }
+            50% { transform: translate(-20px, 30px) scale(0.95); }
+            75% { transform: translate(-30px, -10px) scale(1.02); }
+        }
+
+        .container {
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 48px 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Success Header */
+        .success-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            position: relative;
+        }
+
+        .success-icon svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 8px 32px var(--brand-primary-dim));
+        }
+
+        /* Placeholder for brand logo */
+        .logo-placeholder {
+            width: 80px;
+            height: 80px;
+            background: var(--brand-primary-dim);
+            border: 2px solid var(--brand-primary);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--brand-primary);
+        }
+
+        .success-badge {
+            position: absolute;
+            bottom: -4px;
+            right: -4px;
+            width: 28px;
+            height: 28px;
+            background: var(--success);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 0 4px var(--bg-void), 0 4px 12px rgba(52, 168, 83, 0.4);
+        }
+
+        .success-badge svg {
+            width: 16px;
+            height: 16px;
+            color: white;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+
+        .subtitle strong {
+            color: var(--brand-primary);
+            font-weight: 600;
+        }
+
+        /* Terminal Card */
+        .terminal-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .terminal-bar {
+            background: var(--bg-elevated);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.close { background: #ff5f57; }
+        .terminal-dot.minimize { background: #febc2e; }
+        .terminal-dot.maximize { background: #28c840; }
+
+        .terminal-title {
+            flex: 1;
+            text-align: center;
+            font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-right: 48px;
+        }
+
+        .terminal-body {
+            padding: 20px;
+        }
+
+        .terminal-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .terminal-line:last-child {
+            margin-bottom: 0;
+        }
+
+        .terminal-prompt {
+            color: var(--brand-primary);
+            user-select: none;
+            font-weight: 500;
+        }
+
+        .terminal-cmd {
+            color: var(--text);
+        }
+
+        .terminal-flag {
+            color: #FBBC05;
+        }
+
+        .terminal-arg {
+            color: var(--success);
+        }
+
+        .terminal-output {
+            color: var(--text-dim);
+            padding-left: 18px;
+            margin-top: -6px;
+            margin-bottom: 10px;
+            font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+        }
+
+        .terminal-output.success {
+            color: var(--success);
+        }
+
+        .terminal-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 18px;
+            background: var(--brand-primary);
+            animation: cursorBlink 1.2s step-end infinite;
+            border-radius: 1px;
+        }
+
+        @keyframes cursorBlink {
+            0%, 50% { opacity: 1; }
+            50.01%, 100% { opacity: 0; }
+        }
+
+        /* Info Card */
+        .info-card {
+            padding: 16px 20px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+        }
+
+        .info-icon {
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            background: var(--brand-primary-dim);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .info-icon svg {
+            width: 18px;
+            height: 18px;
+            color: var(--brand-primary);
+        }
+
+        .info-content h4 {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .info-content p {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .info-content code {
+            font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            background: var(--bg-elevated);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--brand-primary);
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 24px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .footer p {
+            display: inline-block;
+            padding: 10px 14px;
+            background: rgba(17, 17, 22, 0.6);
+            border: 1px solid var(--border-subtle);
+            border-radius: 999px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 32px 16px;
+            }
+
+            .terminal-body {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated gradient orbs -->
+    <div class="orb orb-primary"></div>
+    <div class="orb orb-success"></div>
+
+    <div class="container">
+        <header class="success-header">
+            <div class="success-icon">
+                <!-- Replace with actual brand logo SVG -->
+                
+                <!-- Fallback placeholder if no logo -->
+                <div class="logo-placeholder" style="display: none;">R</div>
+                <div class="success-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                </div>
+            </div>
+
+            <h1>Authentication successful</h1>
+            <p class="subtitle">roam is now connected</p>
+        </header>
+
+        <div class="terminal-card">
+            <div class="terminal-bar">
+                <div class="terminal-dots">
+                    <span class="terminal-dot close"></span>
+                    <span class="terminal-dot minimize"></span>
+                    <span class="terminal-dot maximize"></span>
+                </div>
+                <span class="terminal-title">Terminal</span>
+            </div>
+            <div class="terminal-body">
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span>
+                    <span class="terminal-cmd">roam</span>
+                    <span class="terminal-flag">--help</span>
+                </div>
+                <div class="terminal-output success">Ready to use!</div>
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span>
+                    <span class="terminal-cursor"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="4 17 10 11 4 5"></polyline>
+                    <line x1="12" y1="19" x2="20" y2="19"></line>
+                </svg>
+            </div>
+            <div class="info-content">
+                <h4>Return to your terminal</h4>
+                <p>You can close this window. Run <code>roam --help</code> to see available commands.</p>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>Closing in <span id="countdown">{{.CountdownSeconds}}</span> seconds...</p>
+        </footer>
+    </div>
+    <script>
+        let seconds = {{.CountdownSeconds}};
+        const countdownEl = document.getElementById('countdown');
+        const interval = setInterval(() => {
+            seconds--;
+            if (seconds > 0) {
+                countdownEl.textContent = seconds;
+            } else {
+                clearInterval(interval);
+                countdownEl.parentElement.textContent = 'You can close this window.';
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

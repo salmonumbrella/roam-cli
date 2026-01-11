@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authenticating - roam</title>
+    <style>
+        :root {
+            /* Brand colors - customize these for your service */
+            --brand-primary: #4285F4;
+            --brand-secondary: #34A853;
+            --brand-primary-dim: #4285F420;
+
+            /* Dark theme */
+            --bg-void: #050508;
+            --bg-base: #0a0a0f;
+            --bg-surface: #111116;
+            --bg-elevated: #18181d;
+            --border: rgba(255, 255, 255, 0.06);
+            --text: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+
+            --radius: 12px;
+            --radius-lg: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-void);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Subtle grid pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 64px 64px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Animated gradient orb */
+        .orb {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.4;
+            pointer-events: none;
+            background: var(--brand-primary);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: orbPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes orbPulse {
+            0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.5; transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 48px 24px;
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 8px 32px var(--brand-primary-dim));
+        }
+
+        /* Placeholder for brand logo */
+        .logo-placeholder {
+            width: 80px;
+            height: 80px;
+            background: var(--brand-primary-dim);
+            border: 2px solid var(--brand-primary);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--brand-primary);
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 24px;
+            border: 3px solid var(--bg-elevated);
+            border-top-color: var(--brand-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .status {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-top: 32px;
+            text-align: left;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+        }
+
+        .card-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="orb"></div>
+
+    <div class="container">
+        <div class="logo">
+            <!-- Replace with actual brand logo SVG -->
+            
+            <!-- Fallback placeholder if no logo -->
+            <div class="logo-placeholder" style="display: none;">R</div>
+        </div>
+
+        <h1>Authenticating with roam</h1>
+        <p class="subtitle">Complete the login in your browser</p>
+
+        <div class="spinner"></div>
+        <p class="status">Waiting for authorization...</p>
+
+        <div class="card">
+            <div class="card-title">What's happening</div>
+            <p class="card-text">
+                A browser window should have opened asking you to sign in.
+                Once you complete the authentication, this page will update automatically.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
