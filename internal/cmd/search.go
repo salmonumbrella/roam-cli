@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/salmonumbrella/roam-cli/internal/api"
 	"github.com/salmonumbrella/roam-cli/internal/output"
 	"github.com/salmonumbrella/roam-cli/internal/roamdb"
 )
@@ -140,14 +141,17 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	searchText := args[0]
 
 	// Build the query based on case sensitivity
-	// Local API doesn't support clojure.string/lower-case, so force case-sensitive
+	// Roam API doesn't support clojure.string/lower-case, so always use case-sensitive search
 	var query string
 	escapedText := roamdb.EscapeString(searchText)
 
+	// Check if using local API (from stored credentials or --local flag)
+	_, isLocalClient := client.(*api.LocalClient)
+
 	// Determine if we need case-sensitive search
-	// Local API doesn't support clojure.string/lower-case function
-	useCaseSensitive := searchCaseSensitive || useLocal
-	if useLocal && !searchCaseSensitive && !output.QuietFromContext(cmd.Context()) {
+	// Roam API (both cloud and local) doesn't support clojure.string/lower-case function
+	useCaseSensitive := searchCaseSensitive || isLocalClient
+	if isLocalClient && !searchCaseSensitive && !output.QuietFromContext(cmd.Context()) {
 		fmt.Fprintln(cmd.ErrOrStderr(), "Note: Local API uses case-sensitive search")
 	}
 
