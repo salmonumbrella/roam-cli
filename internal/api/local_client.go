@@ -311,31 +311,131 @@ func (c *LocalClient) CreateBlockWithOptionsAndGetUID(parentUID string, opts Blo
 	return uid, nil
 }
 
+// resolveLocationToParentUID resolves a Location to a parent-uid.
+// The local API doesn't support page-title or daily-note-page in locations,
+// so we need to resolve these to actual page UIDs first.
+func (c *LocalClient) resolveLocationToParentUID(loc Location) (string, error) {
+	if loc.ParentUID != "" {
+		return loc.ParentUID, nil
+	}
+
+	var pageTitle string
+	if loc.PageTitle != "" {
+		pageTitle = loc.PageTitle
+	} else if loc.DailyNoteDate != "" {
+		// Convert MM-DD-YYYY to Roam's daily note format (e.g., "January 2nd, 2025")
+		t, err := time.Parse("01-02-2006", loc.DailyNoteDate)
+		if err != nil {
+			return "", fmt.Errorf("invalid daily note date format (expected MM-DD-YYYY): %w", err)
+		}
+		pageTitle = formatRoamDailyNoteTitle(t)
+	} else {
+		return "", fmt.Errorf("location must specify parent-uid, page-title, or daily-note-date")
+	}
+
+	// Look up page UID by title, create if not exists
+	return c.getOrCreatePageUID(pageTitle)
+}
+
+// formatRoamDailyNoteTitle formats a date into Roam's daily note page title format
+// e.g., "January 2nd, 2025"
+func formatRoamDailyNoteTitle(t time.Time) string {
+	day := t.Day()
+	suffix := "th"
+	if day < 11 || day > 13 {
+		switch day % 10 {
+		case 1:
+			suffix = "st"
+		case 2:
+			suffix = "nd"
+		case 3:
+			suffix = "rd"
+		}
+	}
+	return fmt.Sprintf("%s %d%s, %d", t.Month().String(), day, suffix, t.Year())
+}
+
+// getOrCreatePageUID gets the UID of a page by title, creating it if it doesn't exist
+func (c *LocalClient) getOrCreatePageUID(title string) (string, error) {
+	escapedTitle := roamdb.EscapeString(title)
+	query := fmt.Sprintf(`[:find ?uid :where [?p :node/title "%s"] [?p :block/uid ?uid]]`, escapedTitle)
+
+	results, err := c.Query(query)
+	if err != nil {
+		return "", err
+	}
+
+	if len(results) > 0 {
+		if uid, ok := results[0][0].(string); ok {
+			return uid, nil
+		}
+	}
+
+	// Page doesn't exist, create it
+	if err := c.CreatePage(title); err != nil {
+		return "", fmt.Errorf("failed to create page: %w", err)
+	}
+
+	// Query again to get the UID
+	results, err = c.Query(query)
+	if err != nil {
+		return "", err
+	}
+
+	if len(results) > 0 {
+		if uid, ok := results[0][0].(string); ok {
+			return uid, nil
+		}
+	}
+
+	return "", fmt.Errorf("could not get page UID after creation")
+}
+
 // CreateBlockAtLocation creates a block at a flexible location
 func (c *LocalClient) CreateBlockAtLocation(loc Location, opts BlockOptions) error {
+	// Local API doesn't support page-title/daily-note in locations,
+	// so resolve to parent-uid first
+	parentUID, err := c.resolveLocationToParentUID(loc)
+	if err != nil {
+		return err
+	}
+
 	blockMap := map[string]interface{}{
 		"string": opts.Content,
 	}
 	opts.ApplyToMap(blockMap)
 
 	args := map[string]interface{}{
-		"location": loc.ToMap(),
-		"block":    blockMap,
+		"location": map[string]interface{}{
+			"parent-uid": parentUID,
+			"order":      loc.Order,
+		},
+		"block": blockMap,
 	}
-	_, err := c.call("data.block.create", args)
+	_, err = c.call("data.block.create", args)
 	return err
 }
 
 // CreateBlockAtLocationAndGetUID creates a block at a location and returns its UID if available.
 func (c *LocalClient) CreateBlockAtLocationAndGetUID(loc Location, opts BlockOptions) (string, error) {
+	// Local API doesn't support page-title/daily-note in locations,
+	// so resolve to parent-uid first
+	parentUID, err := c.resolveLocationToParentUID(loc)
+	if err != nil {
+		return "", err
+	}
+
 	blockMap := map[string]interface{}{
 		"string": opts.Content,
 	}
 	opts.ApplyToMap(blockMap)
 
 	args := map[string]interface{}{
-		"location": loc.ToMap(),
-		"block":    blockMap,
+		"location": map[string]interface{}{
+			"parent-uid": parentUID,
+			"order":      loc.Order,
+		},
+		"block": blockMap,
 	}
 
 	result, err := c.call("data.block.create", args)
