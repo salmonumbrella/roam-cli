@@ -153,6 +153,7 @@ var blockFromMarkdownCmd = &cobra.Command{
 Examples:
   roam block from-markdown --parent abc123 --markdown "# Title\n- Item"
   roam block from-markdown --page-title "My Page" --order first --markdown-file notes.md
+  roam block from-markdown --page-title "Notes" --markdown-file -
   cat notes.md | roam block from-markdown --daily-note 01-14-2026`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		markdown, err := readMarkdownFromFlags(blockFromMarkdownFile, blockFromMarkdownContent, cmd.InOrStdin())
