@@ -871,7 +871,7 @@ func (c *LocalClient) Search(query string, opts SearchOptions) (json.RawMessage,
 	if opts.Limit > 0 {
 		args["limit"] = opts.Limit
 	}
-	if opts.Pull != nil {
+	if opts.Pull != "" {
 		args["pull"] = opts.Pull
 	}
 	return c.call("data.search", args)
