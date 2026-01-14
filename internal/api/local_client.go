@@ -48,6 +48,7 @@ func (e DesktopNotRunningError) Error() string { return e.Message }
 type LocalClient struct {
 	graphName  string
 	httpClient *http.Client
+	debug      bool
 }
 
 // LocalClientOption is a function that configures a LocalClient
@@ -58,6 +59,18 @@ func WithLocalTimeout(timeout time.Duration) LocalClientOption {
 	return func(c *LocalClient) {
 		c.httpClient.Timeout = timeout
 	}
+}
+
+// WithLocalDebug enables debug logging for the LocalClient
+func WithLocalDebug(debug bool) LocalClientOption {
+	return func(c *LocalClient) {
+		c.debug = debug
+	}
+}
+
+// SetDebug enables or disables debug logging
+func (c *LocalClient) SetDebug(debug bool) {
+	c.debug = debug
 }
 
 // NewLocalClient creates a client for encrypted graphs using the Local API.
@@ -840,6 +853,9 @@ func (c *LocalClient) ReorderBlocks(parentUID string, blockUIDs []string) error 
 		"blocks": blockUIDs,
 	}
 	if _, err := c.call("data.block.reorderBlocks", newArgs); err == nil {
+		if c.debug {
+			fmt.Fprintf(os.Stderr, "[debug] ReorderBlocks: using new API\n")
+		}
 		return nil
 	} else {
 		legacyArgs := map[string]interface{}{
@@ -847,9 +863,15 @@ func (c *LocalClient) ReorderBlocks(parentUID string, blockUIDs []string) error 
 			"block-uids": blockUIDs,
 		}
 		if _, legacyErr := c.call("data.block.reorderBlocks", legacyArgs); legacyErr == nil {
+			if c.debug {
+				fmt.Fprintf(os.Stderr, "[debug] ReorderBlocks: using legacy API\n")
+			}
 			return nil
 		}
 		if _, fallbackErr := c.call("data.block.reorder", legacyArgs); fallbackErr == nil {
+			if c.debug {
+				fmt.Fprintf(os.Stderr, "[debug] ReorderBlocks: using fallback API\n")
+			}
 			return nil
 		}
 		return err

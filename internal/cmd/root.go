@@ -161,10 +161,13 @@ Environment Variables:
 			return fmt.Errorf("failed to create API client: %w", err)
 		}
 
-		// Enable debug if requested (only for cloud client)
+		// Enable debug if requested
 		if debug {
 			if cloudClient, ok := client.(*api.Client); ok {
 				cloudClient.SetDebug(true)
+			}
+			if localClient, ok := client.(*api.LocalClient); ok {
+				localClient.SetDebug(true)
 			}
 		}
 		return nil
