@@ -98,11 +98,15 @@ roam auth status           # Show authentication status
 
 ### Pages
 
+Local-only note: `page from-markdown` uses the encrypted Local API (Roam desktop app).
+
 ```bash
 roam page get <title>               # Get page content
 roam page get <title> --render markdown
 roam page create <title>            # Create new page
 roam page create <title> --uid <u>  # Create with custom UID
+roam page from-markdown <title> --markdown-file notes.md   # Local API only
+roam page from-markdown <title> --markdown "# Heading"     # Local API only
 roam page update <uid> --title "New Title"
 roam page update <uid> --children-view numbered
 roam page delete <uid>
@@ -111,11 +115,15 @@ roam page list --limit 20
 
 ### Blocks
 
+Local-only note: `block from-markdown` uses the encrypted Local API (Roam desktop app).
+
 ```bash
 roam block get <uid>
 roam block create --parent <uid> --content "text"
 roam block create --page-title "My Page" --content "text"
 roam block create --daily-note 01-11-2026 --content "text"
+roam block from-markdown --parent <uid> --markdown-file notes.md   # Local API only
+roam block from-markdown --page-title "My Page" --markdown "# H1"  # Local API only
 roam block update <uid> --content "new text"
 roam block update <uid> --heading 2
 roam block update <uid> --props '{"key":"value"}'
@@ -137,11 +145,14 @@ roam remember "quick note"
 
 ### Search
 
+Local-only note: `search ui` uses the encrypted Local API and matches the Find or Create Page ranking.
+
 ```bash
 roam search "project"
 roam search tags "meeting"
 roam search status TODO
 roam search refs <uid>
+roam search ui "project" --search-pages --search-blocks=false   # Local API only
 ```
 
 ### Query

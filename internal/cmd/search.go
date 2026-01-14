@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -30,6 +31,11 @@ var (
 	searchPage          int
 	searchLimit         int
 	searchCaseSensitive bool
+	searchUIBlocks      bool
+	searchUIPages       bool
+	searchUIHideCode    bool
+	searchUILimit       int
+	searchUIPull        string
 )
 
 var searchCmd = &cobra.Command{
@@ -114,11 +120,22 @@ Examples:
 	RunE: runSearchRefs,
 }
 
+var searchUICmd = &cobra.Command{
+	Use:   "ui <query>",
+	Short: "UI-style search (local only)",
+	Long: `Search pages and blocks using the Local API search algorithm.
+
+This matches the Find or Create Page ranking and supports page results.`,
+	Args: cobra.ExactArgs(1),
+	RunE: runSearchUI,
+}
+
 func init() {
 	rootCmd.AddCommand(searchCmd)
 	searchCmd.AddCommand(searchTagsCmd)
 	searchCmd.AddCommand(searchStatusCmd)
 	searchCmd.AddCommand(searchRefsCmd)
+	searchCmd.AddCommand(searchUICmd)
 
 	// Flags for search command
 	searchCmd.Flags().IntVar(&searchPage, "page", 1, "Page number for pagination")
@@ -134,6 +151,12 @@ func init() {
 
 	searchRefsCmd.Flags().IntVar(&searchPage, "page", 1, "Page number for pagination")
 	searchRefsCmd.Flags().IntVar(&searchLimit, "limit", 50, "Maximum number of results per page")
+
+	searchUICmd.Flags().BoolVar(&searchUIBlocks, "search-blocks", true, "Include block results")
+	searchUICmd.Flags().BoolVar(&searchUIPages, "search-pages", true, "Include page results")
+	searchUICmd.Flags().BoolVar(&searchUIHideCode, "hide-code-blocks", false, "Exclude code blocks from results")
+	searchUICmd.Flags().IntVar(&searchUILimit, "limit", 300, "Maximum number of results to return")
+	searchUICmd.Flags().StringVar(&searchUIPull, "pull", "", "Custom pull pattern (EDN string)")
 }
 
 func runSearch(cmd *cobra.Command, args []string) error {
@@ -325,6 +348,98 @@ func runSearchRefs(cmd *cobra.Command, args []string) error {
 	}
 
 	return outputSearchResults(fmt.Sprintf("refs:%s", uid), searchResults, totalResults, pageUsed)
+}
+
+func runSearchUI(cmd *cobra.Command, args []string) error {
+	query := args[0]
+
+	if !searchUIBlocks && !searchUIPages {
+		return fmt.Errorf("at least one of --search-blocks or --search-pages must be true")
+	}
+
+	localClient, ok := GetClient().(*api.LocalClient)
+	if !ok {
+		return fmt.Errorf("search ui requires the Local API (encrypted graph)")
+	}
+
+	opts := api.SearchOptions{
+		SearchBlocks:   searchUIBlocks,
+		SearchPages:    searchUIPages,
+		HideCodeBlocks: searchUIHideCode,
+		Limit:          searchUILimit,
+	}
+	if strings.TrimSpace(searchUIPull) != "" {
+		opts.Pull = strings.TrimSpace(searchUIPull)
+	}
+
+	raw, err := localClient.Search(query, opts)
+	if err != nil {
+		return fmt.Errorf("search ui failed: %w", err)
+	}
+
+	if structuredOutputRequested() {
+		return printRawStructured(raw)
+	}
+
+	var results []map[string]interface{}
+	if err := json.Unmarshal(raw, &results); err != nil {
+		fmt.Println(string(raw))
+		return nil
+	}
+
+	if len(results) == 0 {
+		fmt.Println("No results found.")
+		return nil
+	}
+
+	fmt.Printf("Found %d results for %q\n", len(results), query)
+	for _, item := range results {
+		fmt.Printf("- %s\n", summarizeSearchUIResult(item))
+	}
+	return nil
+}
+
+func summarizeSearchUIResult(item map[string]interface{}) string {
+	uid := firstString(item, "block/uid", ":block/uid")
+	title := firstString(item, "node/title", ":node/title")
+	content := firstString(item, "block/string", ":block/string")
+
+	if content != "" {
+		if title != "" {
+			if uid != "" {
+				return fmt.Sprintf("%s (page: %s, uid: %s)", content, title, uid)
+			}
+			return fmt.Sprintf("%s (page: %s)", content, title)
+		}
+		if uid != "" {
+			return fmt.Sprintf("%s (uid: %s)", content, uid)
+		}
+		return content
+	}
+
+	if title != "" {
+		if uid != "" {
+			return fmt.Sprintf("%s (uid: %s)", title, uid)
+		}
+		return title
+	}
+
+	if uid != "" {
+		return fmt.Sprintf("uid: %s", uid)
+	}
+
+	return fmt.Sprintf("%v", item)
+}
+
+func firstString(item map[string]interface{}, keys ...string) string {
+	for _, key := range keys {
+		if raw, ok := item[key]; ok {
+			if val, ok := raw.(string); ok {
+				return val
+			}
+		}
+	}
+	return ""
 }
 
 func outputSearchResults(query string, results []SearchResult, totalCount int, page int) error {

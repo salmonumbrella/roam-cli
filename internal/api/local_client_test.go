@@ -271,6 +271,51 @@ func TestLocalClient_CreateBlockWithOptions(t *testing.T) {
 	}
 }
 
+func TestLocalClient_BlockFromMarkdown(t *testing.T) {
+	var receivedRequest localRequest
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		json.Unmarshal(body, &receivedRequest)
+
+		resp := localResponse{Success: true}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	port := extractPort(t, server.URL)
+	portFile := createTempPortFile(t, port)
+	defer os.Remove(portFile)
+
+	client, _ := NewLocalClient("test-graph")
+	loc := Location{ParentUID: "parent-uid", Order: "first"}
+	err := client.CreateBlocksFromMarkdownAtLocation(loc, "- Item")
+	if err != nil {
+		t.Fatalf("CreateBlocksFromMarkdownAtLocation failed: %v", err)
+	}
+
+	if receivedRequest.Action != "data.block.fromMarkdown" {
+		t.Errorf("Expected action 'data.block.fromMarkdown', got '%s'", receivedRequest.Action)
+	}
+	if len(receivedRequest.Args) != 1 {
+		t.Fatalf("Expected 1 arg, got %d", len(receivedRequest.Args))
+	}
+	argsMap, ok := receivedRequest.Args[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected args[0] to be a map")
+	}
+	if argsMap["markdown-string"] != "- Item" {
+		t.Errorf("Expected markdown-string '- Item', got %v", argsMap["markdown-string"])
+	}
+	location, ok := argsMap["location"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected location map in args")
+	}
+	if location["parent-uid"] != "parent-uid" {
+		t.Errorf("Expected parent-uid 'parent-uid', got %v", location["parent-uid"])
+	}
+}
+
 // TestLocalClient_UpdateBlock tests block update
 func TestLocalClient_UpdateBlock(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -428,6 +473,50 @@ func TestLocalClient_CreatePage(t *testing.T) {
 	err := client.CreatePage("New Page")
 	if err != nil {
 		t.Fatalf("CreatePage failed: %v", err)
+	}
+}
+
+func TestLocalClient_CreatePageFromMarkdown(t *testing.T) {
+	var receivedRequest localRequest
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		json.Unmarshal(body, &receivedRequest)
+
+		resp := localResponse{Success: true}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	port := extractPort(t, server.URL)
+	portFile := createTempPortFile(t, port)
+	defer os.Remove(portFile)
+
+	client, _ := NewLocalClient("test-graph")
+	err := client.CreatePageFromMarkdown(PageOptions{Title: "MD Page"}, "# Heading")
+	if err != nil {
+		t.Fatalf("CreatePageFromMarkdown failed: %v", err)
+	}
+
+	if receivedRequest.Action != "data.page.fromMarkdown" {
+		t.Errorf("Expected action 'data.page.fromMarkdown', got '%s'", receivedRequest.Action)
+	}
+	if len(receivedRequest.Args) != 1 {
+		t.Fatalf("Expected 1 arg, got %d", len(receivedRequest.Args))
+	}
+	argsMap, ok := receivedRequest.Args[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected args[0] to be a map")
+	}
+	if argsMap["markdown-string"] != "# Heading" {
+		t.Errorf("Expected markdown-string '# Heading', got %v", argsMap["markdown-string"])
+	}
+	page, ok := argsMap["page"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected page map in args")
+	}
+	if page["title"] != "MD Page" {
+		t.Errorf("Expected page title 'MD Page', got %v", page["title"])
 	}
 }
 
@@ -889,6 +978,67 @@ func TestLocalClient_SearchBlocks(t *testing.T) {
 	}
 }
 
+func TestLocalClient_Search(t *testing.T) {
+	var receivedRequest localRequest
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		json.Unmarshal(body, &receivedRequest)
+
+		resp := localResponse{
+			Success: true,
+			Result:  json.RawMessage(`[{"block/uid":"u1","block/string":"hello"}]`),
+		}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	port := extractPort(t, server.URL)
+	portFile := createTempPortFile(t, port)
+	defer os.Remove(portFile)
+
+	client, _ := NewLocalClient("test-graph")
+	_, err := client.Search("hello", SearchOptions{
+		SearchBlocks:   true,
+		SearchPages:    false,
+		HideCodeBlocks: true,
+		Limit:          10,
+		Pull:           "[:block/uid :block/string]",
+	})
+	if err != nil {
+		t.Fatalf("Search failed: %v", err)
+	}
+
+	if receivedRequest.Action != "data.search" {
+		t.Errorf("Expected action 'data.search', got '%s'", receivedRequest.Action)
+	}
+	if len(receivedRequest.Args) != 1 {
+		t.Fatalf("Expected 1 arg, got %d", len(receivedRequest.Args))
+	}
+	argsMap, ok := receivedRequest.Args[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected args[0] to be a map")
+	}
+	if argsMap["search-str"] != "hello" {
+		t.Errorf("Expected search-str 'hello', got %v", argsMap["search-str"])
+	}
+	if argsMap["search-blocks"] != true {
+		t.Errorf("Expected search-blocks true, got %v", argsMap["search-blocks"])
+	}
+	if argsMap["search-pages"] != false {
+		t.Errorf("Expected search-pages false, got %v", argsMap["search-pages"])
+	}
+	if argsMap["hide-code-blocks"] != true {
+		t.Errorf("Expected hide-code-blocks true, got %v", argsMap["hide-code-blocks"])
+	}
+	if argsMap["limit"] != float64(10) {
+		t.Errorf("Expected limit 10, got %v", argsMap["limit"])
+	}
+	if argsMap["pull"] != "[:block/uid :block/string]" {
+		t.Errorf("Expected pull pattern, got %v", argsMap["pull"])
+	}
+}
+
 // TestLocalClient_ListPages tests page listing
 func TestLocalClient_ListPages(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1032,8 +1182,12 @@ func TestLocalClient_ReorderBlocks(t *testing.T) {
 		t.Fatal("Expected args[0] to be map")
 	}
 
-	if argsMap["parent-uid"] != "parent-uid" {
-		t.Errorf("Expected parent-uid 'parent-uid', got %v", argsMap["parent-uid"])
+	location, ok := argsMap["location"].(map[string]interface{})
+	if !ok {
+		t.Fatal("Expected location map in args")
+	}
+	if location["parent-uid"] != "parent-uid" {
+		t.Errorf("Expected parent-uid 'parent-uid', got %v", location["parent-uid"])
 	}
 }
 

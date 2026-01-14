@@ -450,6 +450,26 @@ func (c *LocalClient) CreateBlockAtLocationAndGetUID(loc Location, opts BlockOpt
 	return uid, nil
 }
 
+// CreateBlocksFromMarkdownAtLocation parses markdown into blocks and inserts at a location.
+func (c *LocalClient) CreateBlocksFromMarkdownAtLocation(loc Location, markdown string) error {
+	// Local API doesn't support page-title/daily-note in locations,
+	// so resolve to parent-uid first.
+	parentUID, err := c.resolveLocationToParentUID(loc)
+	if err != nil {
+		return err
+	}
+
+	args := map[string]interface{}{
+		"location": map[string]interface{}{
+			"parent-uid": parentUID,
+			"order":      loc.Order,
+		},
+		"markdown-string": markdown,
+	}
+	_, err = c.call("data.block.fromMarkdown", args)
+	return err
+}
+
 // UpdateBlock updates the content of an existing block
 func (c *LocalClient) UpdateBlock(uid, content string) error {
 	// Local API expects: data.block.update with a map containing block info
@@ -540,6 +560,25 @@ func (c *LocalClient) CreatePageWithOptions(opts PageOptions) error {
 		"page": pageMap,
 	}
 	_, err := c.call("data.page.create", args)
+	return err
+}
+
+// CreatePageFromMarkdown creates a new page and populates it from markdown.
+func (c *LocalClient) CreatePageFromMarkdown(opts PageOptions, markdown string) error {
+	pageMap := map[string]interface{}{
+		"title": opts.Title,
+	}
+	if opts.UID != "" {
+		pageMap["uid"] = opts.UID
+	}
+	if opts.ChildrenViewType != "" {
+		pageMap["children-view-type"] = opts.ChildrenViewType
+	}
+	args := map[string]interface{}{
+		"page":            pageMap,
+		"markdown-string": markdown,
+	}
+	_, err := c.call("data.page.fromMarkdown", args)
 	return err
 }
 
@@ -794,20 +833,48 @@ func (c *LocalClient) Redo() error {
 // ReorderBlocks sets the order of child blocks under a parent
 // blockUIDs should be in the desired order
 func (c *LocalClient) ReorderBlocks(parentUID string, blockUIDs []string) error {
-	args := map[string]interface{}{
-		"parent-uid": parentUID,
-		"block-uids": blockUIDs,
+	newArgs := map[string]interface{}{
+		"location": map[string]interface{}{
+			"parent-uid": parentUID,
+		},
+		"blocks": blockUIDs,
 	}
-	_, err := c.call("data.block.reorderBlocks", args)
-	if err != nil {
-		// Fallback for older local API versions
-		_, fallbackErr := c.call("data.block.reorder", args)
-		if fallbackErr == nil {
+	if _, err := c.call("data.block.reorderBlocks", newArgs); err == nil {
+		return nil
+	} else {
+		legacyArgs := map[string]interface{}{
+			"parent-uid": parentUID,
+			"block-uids": blockUIDs,
+		}
+		if _, legacyErr := c.call("data.block.reorderBlocks", legacyArgs); legacyErr == nil {
+			return nil
+		}
+		if _, fallbackErr := c.call("data.block.reorder", legacyArgs); fallbackErr == nil {
 			return nil
 		}
 		return err
 	}
-	return nil
+}
+
+// Search runs the Local API search with UI-like ranking.
+func (c *LocalClient) Search(query string, opts SearchOptions) (json.RawMessage, error) {
+	args := map[string]interface{}{
+		"search-str": query,
+	}
+	if opts.SearchBlocks || opts.SearchPages {
+		args["search-blocks"] = opts.SearchBlocks
+		args["search-pages"] = opts.SearchPages
+	}
+	if opts.HideCodeBlocks {
+		args["hide-code-blocks"] = opts.HideCodeBlocks
+	}
+	if opts.Limit > 0 {
+		args["limit"] = opts.Limit
+	}
+	if opts.Pull != nil {
+		args["pull"] = opts.Pull
+	}
+	return c.call("data.search", args)
 }
 
 // UploadFile uploads a file to the graph and returns the URL

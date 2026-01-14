@@ -209,6 +209,104 @@ func TestRunBlockDeletePrompt(t *testing.T) {
 	}
 }
 
+func TestBlockFromMarkdownLocal(t *testing.T) {
+	var received localRequest
+	localClient := newTestLocalClient(t, func(req localRequest) localResponse {
+		received = req
+		return localResponse{Success: true}
+	})
+	restoreClient := withTestClient(t, localClient)
+	defer restoreClient()
+
+	_, _, restoreCtx := withTestContext(t, output.FormatJSON, true)
+	defer restoreCtx()
+	setCmdContext(blockFromMarkdownCmd)
+
+	blockFromMarkdownParent = "parent-uid"
+	blockFromMarkdownContent = "- Item"
+	blockFromMarkdownOrder = "2"
+	defer func() {
+		blockFromMarkdownParent = ""
+		blockFromMarkdownPageTitle = ""
+		blockFromMarkdownDailyNote = ""
+		blockFromMarkdownOrder = "last"
+		blockFromMarkdownContent = ""
+		blockFromMarkdownFile = ""
+	}()
+
+	if err := blockFromMarkdownCmd.RunE(blockFromMarkdownCmd, nil); err != nil {
+		t.Fatalf("block from-markdown failed: %v", err)
+	}
+
+	if received.Action != "data.block.fromMarkdown" {
+		t.Fatalf("expected action data.block.fromMarkdown, got %q", received.Action)
+	}
+	if len(received.Args) != 1 {
+		t.Fatalf("expected 1 arg, got %d", len(received.Args))
+	}
+	argsMap, ok := received.Args[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected args[0] to be a map")
+	}
+	if argsMap["markdown-string"] != "- Item" {
+		t.Fatalf("expected markdown-string '- Item', got %v", argsMap["markdown-string"])
+	}
+	location, ok := argsMap["location"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected location map in args")
+	}
+	if location["parent-uid"] != "parent-uid" {
+		t.Fatalf("expected parent-uid 'parent-uid', got %v", location["parent-uid"])
+	}
+	if location["order"] != float64(2) {
+		t.Fatalf("expected order 2, got %v", location["order"])
+	}
+}
+
+func TestBlockFromMarkdownRequiresLocal(t *testing.T) {
+	fake := &fakeClient{}
+	restoreClient := withTestClient(t, fake)
+	defer restoreClient()
+
+	_, _, restoreCtx := withTestContext(t, output.FormatJSON, true)
+	defer restoreCtx()
+	setCmdContext(blockFromMarkdownCmd)
+
+	blockFromMarkdownParent = "parent-uid"
+	blockFromMarkdownContent = "- Item"
+	defer func() {
+		blockFromMarkdownParent = ""
+		blockFromMarkdownContent = ""
+	}()
+
+	if err := blockFromMarkdownCmd.RunE(blockFromMarkdownCmd, nil); err == nil {
+		t.Fatalf("expected error for non-local client")
+	}
+}
+
+func TestBlockFromMarkdownConflictFlags(t *testing.T) {
+	fake := &fakeClient{}
+	restoreClient := withTestClient(t, fake)
+	defer restoreClient()
+
+	_, _, restoreCtx := withTestContext(t, output.FormatJSON, true)
+	defer restoreCtx()
+	setCmdContext(blockFromMarkdownCmd)
+
+	blockFromMarkdownParent = "parent-uid"
+	blockFromMarkdownContent = "- Item"
+	blockFromMarkdownFile = "notes.md"
+	defer func() {
+		blockFromMarkdownParent = ""
+		blockFromMarkdownContent = ""
+		blockFromMarkdownFile = ""
+	}()
+
+	if err := blockFromMarkdownCmd.RunE(blockFromMarkdownCmd, nil); err == nil {
+		t.Fatalf("expected error for conflicting markdown flags")
+	}
+}
+
 func TestParsePropsJSON(t *testing.T) {
 	props, err := parsePropsJSON(`{"a":1}`)
 	if err != nil {

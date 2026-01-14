@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -134,6 +135,108 @@ var (
 	blockCreateChildrenView string
 	blockCreateProps        string
 )
+
+var (
+	blockFromMarkdownParent    string
+	blockFromMarkdownPageTitle string
+	blockFromMarkdownDailyNote string
+	blockFromMarkdownOrder     string
+	blockFromMarkdownContent   string
+	blockFromMarkdownFile      string
+)
+
+var blockFromMarkdownCmd = &cobra.Command{
+	Use:   "from-markdown",
+	Short: "Insert blocks from markdown (local only)",
+	Long: `Parse a markdown string into blocks and insert them at a location using the Local API.
+
+Examples:
+  roam block from-markdown --parent abc123 --markdown "# Title\n- Item"
+  roam block from-markdown --page-title "My Page" --order first --markdown-file notes.md
+  cat notes.md | roam block from-markdown --daily-note 01-14-2026`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		markdown, err := readMarkdownFromFlags(blockFromMarkdownFile, blockFromMarkdownContent, cmd.InOrStdin())
+		if err != nil {
+			return err
+		}
+
+		locationCount := 0
+		if blockFromMarkdownParent != "" {
+			locationCount++
+		}
+		if blockFromMarkdownPageTitle != "" {
+			locationCount++
+		}
+		if blockFromMarkdownDailyNote != "" {
+			locationCount++
+		}
+		if locationCount == 0 {
+			return fmt.Errorf("one of --parent, --page-title, or --daily-note is required")
+		}
+		if locationCount > 1 {
+			return fmt.Errorf("only one of --parent, --page-title, or --daily-note can be specified")
+		}
+
+		var order interface{} = "last"
+		if blockFromMarkdownOrder != "" {
+			if blockFromMarkdownOrder == "first" || blockFromMarkdownOrder == "last" {
+				order = blockFromMarkdownOrder
+			} else {
+				orderInt, err := strconv.Atoi(blockFromMarkdownOrder)
+				if err != nil {
+					return fmt.Errorf("invalid order value: %s (must be a number, 'first', or 'last')", blockFromMarkdownOrder)
+				}
+				order = orderInt
+			}
+		}
+
+		localClient, ok := GetClient().(*api.LocalClient)
+		if !ok {
+			return fmt.Errorf("block from-markdown requires the Local API (encrypted graph)")
+		}
+
+		loc := api.Location{Order: order}
+		if blockFromMarkdownParent != "" {
+			loc.ParentUID = blockFromMarkdownParent
+		} else if blockFromMarkdownPageTitle != "" {
+			loc.PageTitle = blockFromMarkdownPageTitle
+		} else if blockFromMarkdownDailyNote != "" {
+			loc.DailyNoteDate = blockFromMarkdownDailyNote
+		}
+
+		if err := localClient.CreateBlocksFromMarkdownAtLocation(loc, markdown); err != nil {
+			var localErr api.LocalAPIError
+			if errors.As(err, &localErr) && localErr.IsResponseTimeout() {
+				probe := markdownProbe(markdown)
+				if probe == "" || verifyBlockCreatedByContent(localClient, probe) {
+					goto blockCreated
+				}
+			}
+			return fmt.Errorf("failed to insert markdown blocks: %w", err)
+		}
+	blockCreated:
+
+		if structuredOutputRequested() {
+			result := map[string]interface{}{
+				"status": "created",
+				"order":  order,
+			}
+			if loc.ParentUID != "" {
+				result["parent_uid"] = loc.ParentUID
+			}
+			if loc.PageTitle != "" {
+				result["page_title"] = loc.PageTitle
+			}
+			if loc.DailyNoteDate != "" {
+				result["daily_note"] = loc.DailyNoteDate
+			}
+			return printStructured(result)
+		}
+
+		fmt.Println("Inserted markdown blocks.")
+		return nil
+	},
+}
 
 func runBlockCreate(cmd *cobra.Command, args []string) error {
 	if blockCreateContent == "" {
@@ -560,6 +663,49 @@ func parsePropsJSON(raw string) (map[string]interface{}, error) {
 	return props, nil
 }
 
+func markdownProbe(markdown string) string {
+	lines := strings.Split(markdown, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		for strings.HasPrefix(trimmed, "#") {
+			trimmed = strings.TrimPrefix(trimmed, "#")
+		}
+		trimmed = strings.TrimSpace(trimmed)
+		for _, prefix := range []string{"- ", "* ", "+ "} {
+			if strings.HasPrefix(trimmed, prefix) {
+				trimmed = strings.TrimSpace(strings.TrimPrefix(trimmed, prefix))
+				break
+			}
+		}
+		trimmed = strings.TrimSpace(trimmed)
+		if dot := strings.Index(trimmed, ". "); dot > 0 {
+			if isAllDigits(trimmed[:dot]) {
+				trimmed = strings.TrimSpace(trimmed[dot+2:])
+			}
+		}
+		trimmed = strings.TrimSpace(trimmed)
+		if len(trimmed) >= 3 {
+			return trimmed
+		}
+	}
+	return ""
+}
+
+func isAllDigits(value string) bool {
+	if value == "" {
+		return false
+	}
+	for _, r := range value {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
 func init() {
 	rootCmd.AddCommand(blockCmd)
 
@@ -582,6 +728,15 @@ func init() {
 	blockCreateCmd.Flags().StringVar(&blockCreateChildrenView, "children-view", "", "Children view: bullet, numbered, document")
 	blockCreateCmd.Flags().StringVar(&blockCreateProps, "props", "", "Block props as JSON object")
 	_ = blockCreateCmd.MarkFlagRequired("content")
+
+	// From-markdown command
+	blockCmd.AddCommand(blockFromMarkdownCmd)
+	blockFromMarkdownCmd.Flags().StringVar(&blockFromMarkdownParent, "parent", "", "Parent block or page UID")
+	blockFromMarkdownCmd.Flags().StringVar(&blockFromMarkdownPageTitle, "page-title", "", "Target page by title (creates if not exists)")
+	blockFromMarkdownCmd.Flags().StringVar(&blockFromMarkdownDailyNote, "daily-note", "", "Target daily note by date (MM-DD-YYYY)")
+	blockFromMarkdownCmd.Flags().StringVar(&blockFromMarkdownOrder, "order", "last", "Position: number, 'first', or 'last'")
+	blockFromMarkdownCmd.Flags().StringVar(&blockFromMarkdownContent, "markdown", "", "Markdown content as a string")
+	blockFromMarkdownCmd.Flags().StringVar(&blockFromMarkdownFile, "markdown-file", "", "Markdown file path (or - for stdin)")
 
 	// Update command
 	blockCmd.AddCommand(blockUpdateCmd)

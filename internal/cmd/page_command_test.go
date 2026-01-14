@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -106,5 +107,117 @@ func TestPageUpdateStructured(t *testing.T) {
 	}
 	if gotUID != "uid-1" || gotTitle != "New Title" {
 		t.Fatalf("unexpected update: %s %s", gotUID, gotTitle)
+	}
+}
+
+func TestPageFromMarkdownLocal(t *testing.T) {
+	var received localRequest
+	localClient := newTestLocalClient(t, func(req localRequest) localResponse {
+		received = req
+		return localResponse{Success: true}
+	})
+	restoreClient := withTestClient(t, localClient)
+	defer restoreClient()
+
+	_, _, restoreCtx := withTestContext(t, output.FormatJSON, true)
+	defer restoreCtx()
+	setCmdContext(pageFromMarkdownCmd)
+
+	pageFromMarkdownContent = "# Heading"
+	pageFromMarkdownUID = "page-uid"
+	pageFromMarkdownChildrenView = "numbered"
+	defer func() {
+		pageFromMarkdownContent = ""
+		pageFromMarkdownFile = ""
+		pageFromMarkdownUID = ""
+		pageFromMarkdownChildrenView = ""
+	}()
+
+	if err := pageFromMarkdownCmd.RunE(pageFromMarkdownCmd, []string{"My Page"}); err != nil {
+		t.Fatalf("page from-markdown failed: %v", err)
+	}
+
+	if received.Action != "data.page.fromMarkdown" {
+		t.Fatalf("expected action data.page.fromMarkdown, got %q", received.Action)
+	}
+	if len(received.Args) != 1 {
+		t.Fatalf("expected 1 arg, got %d", len(received.Args))
+	}
+	argsMap, ok := received.Args[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected args[0] to be a map")
+	}
+	if argsMap["markdown-string"] != "# Heading" {
+		t.Fatalf("expected markdown-string, got %v", argsMap["markdown-string"])
+	}
+	pageMap, ok := argsMap["page"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected page map in args")
+	}
+	if pageMap["title"] != "My Page" {
+		t.Fatalf("expected page title 'My Page', got %v", pageMap["title"])
+	}
+	if pageMap["uid"] != "page-uid" {
+		t.Fatalf("expected uid 'page-uid', got %v", pageMap["uid"])
+	}
+	if pageMap["children-view-type"] != "numbered" {
+		t.Fatalf("expected children-view-type 'numbered', got %v", pageMap["children-view-type"])
+	}
+}
+
+func TestPageFromMarkdownRequiresLocal(t *testing.T) {
+	fake := &fakeClient{}
+	restoreClient := withTestClient(t, fake)
+	defer restoreClient()
+
+	_, _, restoreCtx := withTestContext(t, output.FormatJSON, true)
+	defer restoreCtx()
+	setCmdContext(pageFromMarkdownCmd)
+
+	pageFromMarkdownContent = "# Heading"
+	defer func() { pageFromMarkdownContent = "" }()
+
+	if err := pageFromMarkdownCmd.RunE(pageFromMarkdownCmd, []string{"My Page"}); err == nil {
+		t.Fatalf("expected error for non-local client")
+	}
+}
+
+func TestPageFromMarkdownConflictFlags(t *testing.T) {
+	fake := &fakeClient{}
+	restoreClient := withTestClient(t, fake)
+	defer restoreClient()
+
+	_, _, restoreCtx := withTestContext(t, output.FormatJSON, true)
+	defer restoreCtx()
+	setCmdContext(pageFromMarkdownCmd)
+
+	pageFromMarkdownContent = "# Heading"
+	pageFromMarkdownFile = "notes.md"
+	defer func() {
+		pageFromMarkdownContent = ""
+		pageFromMarkdownFile = ""
+	}()
+
+	if err := pageFromMarkdownCmd.RunE(pageFromMarkdownCmd, []string{"My Page"}); err == nil {
+		t.Fatalf("expected error for conflicting markdown flags")
+	}
+}
+
+func TestPageFromMarkdownEmptyInput(t *testing.T) {
+	fake := &fakeClient{}
+	restoreClient := withTestClient(t, fake)
+	defer restoreClient()
+
+	_, _, restoreCtx := withTestContext(t, output.FormatJSON, true)
+	defer restoreCtx()
+	setCmdContext(pageFromMarkdownCmd)
+
+	in := &bytes.Buffer{}
+	prevIn := pageFromMarkdownCmd.InOrStdin()
+	pageFromMarkdownCmd.SetIn(in)
+	defer pageFromMarkdownCmd.SetIn(prevIn)
+
+	if err := pageFromMarkdownCmd.RunE(pageFromMarkdownCmd, []string{"My Page"}); err == nil {
+		t.Fatalf("expected error for empty markdown input")
 	}
 }

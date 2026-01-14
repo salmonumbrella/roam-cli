@@ -41,3 +41,100 @@ func TestSearchStructured(t *testing.T) {
 		t.Fatalf("expected 1 result, got %v", parsed["count"])
 	}
 }
+
+func TestSearchUIStructuredLocal(t *testing.T) {
+	var received localRequest
+	localClient := newTestLocalClient(t, func(req localRequest) localResponse {
+		received = req
+		return localResponse{Success: true, Result: json.RawMessage(`[]`)}
+	})
+	restoreClient := withTestClient(t, localClient)
+	defer restoreClient()
+
+	_, _, restoreCtx := withTestContext(t, output.FormatJSON, true)
+	defer restoreCtx()
+	setCmdContext(searchUICmd)
+
+	searchUIBlocks = false
+	searchUIPages = true
+	searchUIHideCode = true
+	searchUILimit = 10
+	searchUIPull = "[:block/uid]"
+	defer func() {
+		searchUIBlocks = true
+		searchUIPages = true
+		searchUIHideCode = false
+		searchUILimit = 300
+		searchUIPull = ""
+	}()
+
+	if err := searchUICmd.RunE(searchUICmd, []string{"query"}); err != nil {
+		t.Fatalf("search ui failed: %v", err)
+	}
+
+	if received.Action != "data.search" {
+		t.Fatalf("expected action data.search, got %q", received.Action)
+	}
+	if len(received.Args) != 1 {
+		t.Fatalf("expected 1 arg, got %d", len(received.Args))
+	}
+	argsMap, ok := received.Args[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected args[0] to be a map")
+	}
+	if argsMap["search-str"] != "query" {
+		t.Fatalf("expected search-str 'query', got %v", argsMap["search-str"])
+	}
+	if argsMap["search-blocks"] != false {
+		t.Fatalf("expected search-blocks false, got %v", argsMap["search-blocks"])
+	}
+	if argsMap["search-pages"] != true {
+		t.Fatalf("expected search-pages true, got %v", argsMap["search-pages"])
+	}
+	if argsMap["hide-code-blocks"] != true {
+		t.Fatalf("expected hide-code-blocks true, got %v", argsMap["hide-code-blocks"])
+	}
+	if argsMap["limit"] != float64(10) {
+		t.Fatalf("expected limit 10, got %v", argsMap["limit"])
+	}
+	if argsMap["pull"] != "[:block/uid]" {
+		t.Fatalf("expected pull pattern, got %v", argsMap["pull"])
+	}
+}
+
+func TestSearchUIRequiresLocal(t *testing.T) {
+	fake := &fakeClient{}
+	restoreClient := withTestClient(t, fake)
+	defer restoreClient()
+
+	_, _, restoreCtx := withTestContext(t, output.FormatJSON, true)
+	defer restoreCtx()
+	setCmdContext(searchUICmd)
+
+	if err := searchUICmd.RunE(searchUICmd, []string{"query"}); err == nil {
+		t.Fatalf("expected error for non-local client")
+	}
+}
+
+func TestSearchUIRequiresFlags(t *testing.T) {
+	localClient := newTestLocalClient(t, func(req localRequest) localResponse {
+		return localResponse{Success: true, Result: json.RawMessage(`[]`)}
+	})
+	restoreClient := withTestClient(t, localClient)
+	defer restoreClient()
+
+	_, _, restoreCtx := withTestContext(t, output.FormatJSON, true)
+	defer restoreCtx()
+	setCmdContext(searchUICmd)
+
+	searchUIBlocks = false
+	searchUIPages = false
+	defer func() {
+		searchUIBlocks = true
+		searchUIPages = true
+	}()
+
+	if err := searchUICmd.RunE(searchUICmd, []string{"query"}); err == nil {
+		t.Fatalf("expected error when both search-blocks and search-pages are false")
+	}
+}

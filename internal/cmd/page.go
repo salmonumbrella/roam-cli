@@ -211,6 +211,73 @@ Examples:
 	},
 }
 
+var (
+	pageFromMarkdownContent      string
+	pageFromMarkdownFile         string
+	pageFromMarkdownUID          string
+	pageFromMarkdownChildrenView string
+)
+
+var pageFromMarkdownCmd = &cobra.Command{
+	Use:   "from-markdown <title>",
+	Short: "Create a new page from markdown (local only)",
+	Long: `Create a new page and populate it by parsing markdown using the Local API.
+
+This command uses Roam's markdown importer and will fail if the page already exists.
+
+Examples:
+  roam page from-markdown "My New Page" --markdown "# Heading\n- Item"
+  roam page from-markdown "Meeting Notes" --markdown-file notes.md
+  cat notes.md | roam page from-markdown "Daily"`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		title := args[0]
+
+		markdown, err := readMarkdownFromFlags(pageFromMarkdownFile, pageFromMarkdownContent, cmd.InOrStdin())
+		if err != nil {
+			return err
+		}
+
+		localClient, ok := GetClient().(*api.LocalClient)
+		if !ok {
+			return fmt.Errorf("page from-markdown requires the Local API (encrypted graph)")
+		}
+
+		opts := api.PageOptions{
+			Title:            title,
+			UID:              pageFromMarkdownUID,
+			ChildrenViewType: pageFromMarkdownChildrenView,
+		}
+		if err := localClient.CreatePageFromMarkdown(opts, markdown); err != nil {
+			var localErr api.LocalAPIError
+			if errors.As(err, &localErr) && localErr.IsResponseTimeout() {
+				if verifyPageCreated(localClient, title) {
+					goto pageCreated
+				}
+			}
+			return fmt.Errorf("failed to create page from markdown: %w", err)
+		}
+	pageCreated:
+
+		if structuredOutputRequested() {
+			result := map[string]interface{}{
+				"status": "created",
+				"title":  title,
+			}
+			if opts.UID != "" {
+				result["uid"] = opts.UID
+			}
+			if opts.ChildrenViewType != "" {
+				result["children_view"] = opts.ChildrenViewType
+			}
+			return printStructured(result)
+		}
+
+		fmt.Printf("Created page from markdown: %s\n", title)
+		return nil
+	},
+}
+
 // Page update command
 var pageUpdateCmd = &cobra.Command{
 	Use:   "update <uid>",
@@ -289,8 +356,15 @@ Examples:
 
 		client := GetClient()
 		if err := client.DeletePage(uid); err != nil {
+			var localErr api.LocalAPIError
+			if errors.As(err, &localErr) && localErr.IsResponseTimeout() {
+				if verifyPageDeleted(client, uid) {
+					goto pageDeleted
+				}
+			}
 			return fmt.Errorf("failed to delete page: %w", err)
 		}
+	pageDeleted:
 
 		if structuredOutputRequested() {
 			result := map[string]string{
@@ -513,6 +587,17 @@ func verifyPageCreated(client api.RoamAPI, title string) bool {
 	return len(results) > 0
 }
 
+// verifyPageDeleted checks if a page with the given uid no longer exists.
+func verifyPageDeleted(client api.RoamAPI, uid string) bool {
+	time.Sleep(500 * time.Millisecond)
+	_, err := client.GetBlockByUID(uid)
+	if err == nil {
+		return false
+	}
+	var notFound api.NotFoundError
+	return errors.As(err, &notFound)
+}
+
 func init() {
 	// Add page command to root
 	rootCmd.AddCommand(pageCmd)
@@ -520,6 +605,7 @@ func init() {
 	// Add subcommands to page
 	pageCmd.AddCommand(pageGetCmd)
 	pageCmd.AddCommand(pageCreateCmd)
+	pageCmd.AddCommand(pageFromMarkdownCmd)
 	pageCmd.AddCommand(pageUpdateCmd)
 	pageCmd.AddCommand(pageDeleteCmd)
 	pageCmd.AddCommand(pageListCmd)
@@ -532,6 +618,12 @@ func init() {
 	pageCreateCmd.Flags().StringP("content", "c", "", "Initial content for the page")
 	pageCreateCmd.Flags().String("uid", "", "Custom page UID (optional)")
 	pageCreateCmd.Flags().String("children-view", "", "Children view: bullet, numbered, document")
+
+	// Flags for from-markdown command
+	pageFromMarkdownCmd.Flags().StringVar(&pageFromMarkdownContent, "markdown", "", "Markdown content as a string")
+	pageFromMarkdownCmd.Flags().StringVar(&pageFromMarkdownFile, "markdown-file", "", "Markdown file path (or - for stdin)")
+	pageFromMarkdownCmd.Flags().StringVar(&pageFromMarkdownUID, "uid", "", "Custom page UID (optional)")
+	pageFromMarkdownCmd.Flags().StringVar(&pageFromMarkdownChildrenView, "children-view", "", "Children view: bullet, numbered, document")
 
 	// Flags for update command
 	pageUpdateCmd.Flags().StringP("title", "t", "", "New title for the page")
